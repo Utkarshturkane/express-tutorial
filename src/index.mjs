@@ -4,7 +4,33 @@ const app = express();
 
 app.use(express.json());
 
+const loggingMiddleware = (request, response, next) => {
+  console.log(`${request.method} - ${request.url}`);
+  next();
+};
+
+// app.use(loggingMiddleware);
+
 const PORT = process.env.PORT || 3000;
+
+const resolveIndexByUserId = (request, response, next) => {
+  const {
+    // body,
+    params: { id },
+  } = request;
+
+  const parsedId = parseInt(id);
+  if (isNaN(parsedId)) return response.sendStatus(400);
+
+  const findUserIndex = mockuser.findIndex((user) => {
+    return user.id === parsedId;
+  });
+
+  if (findUserIndex === -1) return response.sendStatus(404);
+
+  request.findUserIndex = findUserIndex;
+  next();
+};
 
 const mockuser = [
   { id: 1, username: "Utkarsh" },
@@ -17,9 +43,32 @@ const mockuser = [
   { id: 8, username: "Saraha" },
 ];
 
-app.get("/", (request, response) => {
-  response.status(201).send({ msg: "Hello" });
-});
+// app.get("/", loggingMiddleware, (request, response) => {
+//   response.status(201).send({ msg: "Hello" });
+// });
+
+app.get(
+  "/",
+  (request, response, next) => {
+    console.log("middleware calling");
+    next();
+  },
+  (request, response, next) => {
+    console.log("middleware calling2");
+    next();
+  },
+  (request, response, next) => {
+    console.log("middleware calling3");
+    next();
+  },
+  (request, response, next) => {
+    console.log("middleware calling4");
+    next();
+  },
+  (request, response) => {
+    response.status(201).send({ msg: "Hello" });
+  },
+);
 
 // query string
 app.get("/api/users", (request, response) => {
@@ -49,16 +98,9 @@ app.post("/api/users", (request, response) => {
 });
 
 // route params
-app.get("/api/users/:id", (request, response) => {
-  console.log(request.params);
-  const parseId = parseInt(request.params.id);
-  console.log(parseId);
-  if (isNaN(parseId)) return response.status(400).send({ msg: "Bad Request" });
-
-  const findUser = mockuser.find((user) => {
-    return user.id === parseId;
-  });
-
+app.get("/api/users/:id", resolveIndexByUserId, (request, response) => {
+  const { findUserIndex } = request;
+  const findUser = mockuser[findUserIndex];
   if (!findUser) return response.sendStatus(404);
   return response.send(findUser);
 });
@@ -67,57 +109,33 @@ app.get("/api/products", (request, response) => {
   response.send([{ id: 123, name: "bag", price: 2000 }]);
 });
 
-app.put("/api/users/:id", (request, response) => {
+app.put("/api/users/:id", resolveIndexByUserId, (request, response) => {
   const {
     body,
-    params: { id },
+    // params: { id },
+    findUserIndex,
   } = request;
 
-  const parsedId = parseInt(id);
-  if (isNaN(parsedId)) return response.sendStatus(400);
-
-  const findUserIndex = mockuser.findIndex((user) => {
-    return user.id === parsedId;
-  });
-
-  if (findUserIndex === -1) return response.sendStatus(404);
-
-  mockuser[findUserIndex] = { id: parsedId, ...body };
+  mockuser[findUserIndex] = { id: mockuser[findUserIndex].id, ...body };
   return response.sendStatus(200);
 });
 
-app.patch("/api/users/:id", (request, response) => {
+app.patch("/api/users/:id", resolveIndexByUserId, (request, response) => {
   const {
     body,
-    params: { id },
+    // params: { id },
+    findUserIndex,
   } = request;
 
-  const parsedId = parseInt(id);
-  if (isNaN(parsedId)) return response.sendStatus(400);
-
-  const findUserIndex = mockuser.findIndex((user) => {
-    return user.id === parsedId;
-  });
-
-  if (findUserIndex === -1) return response.sendStatus(404);
   mockuser[findUserIndex] = { ...mockuser[findUserIndex], ...body };
   return response.sendStatus(200);
 });
 
-app.delete("/api/users/:id", (request, response) => {
+app.delete("/api/users/:id", resolveIndexByUserId, (request, response) => {
   const {
-    params: { id },
+    // params: { id },
+    findUserIndex,
   } = request;
-
-  const parseId = parseInt(id);
-
-  if (isNaN(parseId)) return response.sendStatus(400);
-
-  const findUserIndex = mockuser.findIndex((user) => {
-    return user.id === parseId;
-  });
-
-  if (findUserIndex === -1) return response.sendStatus(404);
 
   mockuser.splice(findUserIndex, 1);
   return response.sendStatus(200);
