@@ -1,6 +1,12 @@
 import express from "express";
-import { query, validationResult, body, matchedData } from "express-validator";
-
+import {
+  query,
+  validationResult,
+  body,
+  matchedData,
+  checkSchema,
+} from "express-validator";
+import { createUserValidationSchema } from "./utils/validationSchemas.mjs";
 const app = express();
 
 app.use(express.json());
@@ -104,16 +110,7 @@ app.get(
 
 app.post(
   "/api/users",
-  [
-    body("username")
-      .notEmpty()
-      .withMessage("Username cannot be empty")
-      .isLength({ min: 5, max: 32 })
-      .withMessage("Username must be atleast min of 5 char and max 32 char")
-      .isString()
-      .withMessage("Username must be a string!"),
-    body("displayName").notEmpty().withMessage("displayName cannot be empty"),
-  ],
+  checkSchema(createUserValidationSchema),
   (request, response) => {
     const result = validationResult(request);
     console.log(result);
